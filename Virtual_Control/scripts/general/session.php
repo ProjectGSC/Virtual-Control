@@ -84,10 +84,40 @@ function session_action_scripts(): void {
  * 
  * @param string $post_id リクエスト通信で得られるIDを指定します
  * @param int $filter フィルタするメソッド定数を指定します（Default: FILTER_SANITIZE_STRING）
- * @return array|
+ * @return string データを文字列として返します
  */
 function post_get_data($post_id, $filter = FILTER_SANITIZE_STRING) {
     $data = filter_input(INPUT_POST, $post_id, $filter);
+    return $data;
+}
+
+/**
+ * [FUNCTION] POST通信データ取得（データ比較）
+ * 
+ * POST通信のリクエストデータをIDにより取得します<br>
+ * ここでは、POST通信のリクエストデータを取得できなかった場合に指定された変数のデータを返すことができます
+ * 
+ * @param string $post_id リクエスト通信で得られるIDを指定します
+ * @param string|int $s_data nullの場合の埋め合わせ変数を指定します
+ * @param int $filter フィルタするメソッド定数を指定します（Default: FILTER_SANITIZE_STRING）
+ * @return string データが取得できた場合はそのデータを、できなかった場合は$s_dataのデータを返します
+ */
+function post_get_data_convert($post_id, $s_data, $filter = FILTER_SANITIZE_STRING) {
+    $data = filter_input(INPUT_POST, $post_id, $filter);
+    return ($data) ? $data : $s_data;
+}
+
+/**
+ * [FUNCTION] POST通信データ取得
+ * 
+ * POST通信のリクエストデータ（配列）をIDにより取得します
+ * 
+ * @param string $post_id リクエスト通信で得られるIDを指定します
+ * @param int $filter フィルタするメソッド定数を指定します（Default: FILTER_SANITIZE_STRING）
+ * @return array フィルタされた値が配列として返されます
+ */
+function post_get_data_array($post_id) {
+    $data = filter_input(INPUT_POST, $post_id, FILTER_DEFAULT, FILTER_REQUIRE_ARRAY);
     return $data;
 }
 
@@ -105,7 +135,7 @@ function session_action_user(): void {
 	    header('location: /error.php');
 	    exit();
 	    break;
-	case 2:
+	case 2: case 3:
 	    http_response_code(301);
 	    header('location: /logout');
 	    exit();
@@ -127,6 +157,11 @@ function session_action_guest(): void {
 	    header('location: /dash');
 	    exit();
 	    break;
+	case 3:
+	    http_response_code(301);
+	    header('location: /init.php');	    
+	    exit();
+	    break;
     }
 }
 
@@ -135,7 +170,7 @@ function session_action_guest(): void {
  * 
  * ユーザ判定を行います
  * 
- * return int 0..正常（ユーザである）, 1..異常（ユーザではない）, 2..異常（データベースまたはログイン状態）
+ * return int 0..正常（ユーザである）, 1..異常（ユーザではない）, 2..異常（データベースまたはログイン状態）, 3..整合性エラー（ユーザ未登録状態）
  */
 function session_chk(): int {
     session_start_once();
@@ -143,11 +178,11 @@ function session_chk(): int {
     if (session_exists('gsc_userid')) {
 	$userid = session_get_userid();
 	$res = select(true, "GSC_USERS", "LOGINSTATE", "WHERE USERID = '$userid'");
-	if ($res && $res['LOGINSTATE'] == 1) {
-	    $chk = 0;
-	} else {
-	    $chk = 2;
-	}
+	$chk = ($res && $res['LOGINSTATE'] == 1) ? 0 : 2;
+    }
+    if($chk == 2) {
+	$res = select(false, 'GSC_USERS', 'USERID');
+	$chk = ($res) ? 2 : 3;
     }
     return $chk;
 }

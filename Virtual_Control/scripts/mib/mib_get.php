@@ -1,253 +1,208 @@
 <?php
 
-include_once __DIR__ . '/../general/sqldata.php';
-include_once __DIR__ . '/../icons/icondata.php';
-include_once __DIR__ . '/../icons/iconselect.php';
-include_once __DIR__ . '/mibdata.php';
-include_once __DIR__ . '/mibpage.php';
-include_once __DIR__ . '/../session/session_chk.php';
+/**
+ * [CLASS] MIB_GET_CLASS
+ * 
+ * <h4>MIB GET 共通クラス</h4><hr>
+ * OPTION - MIBの操作に関する共通のリテラルを定義したクラスです
+ * 
+ * @package VirtualControl_scripts_mib
+ * @author ClearNB <clear.navy.blue.star@gmail.com>
+ */
+class MIBGetClass {
 
-session_action_scripts();
+    public $session_data;
+    public $request_code;
+    public $request_data_code;
 
-$request_id = post_get_data('request_id');
-$request_data_id = post_get_data('request_data_id');
-
-//GROUP
-$group_oid = post_get_data('in_gp_id');
-$group_name = post_get_data('in_gp_nm');
-
-//SUB
-$sub_oid = post_get_data('in_sb_id');
-$sub_name = post_get_data('in_sb_nm');
-
-//NODE
-$node_oid = post_get_data('in_nd_id');
-$node_oid_sub = post_get_data('in_nd_id_sb');
-$node_oid_table_id = post_get_data('in_nd_id_tb');
-$node_descr = post_get_data('in_nd_ds');
-$node_japtlans = post_getdata('in_nd_jp');
-$node_type = post_get_data('in_nd_tp');
-$node_option = post_get_data('in_nd_op');
-$node_iconid = post_get_data('in_nd_ic');
-
-$code = (!$request_id ||($request_id && $request_data_id == 999)) ? 1 : 0;
-$html = '';
-$res_data = '';
-
-if ($code == 0) {
-    $data = '';
-    if ($request_id == 20) {
-        initialize();
+    /**
+     * [SET] CONSTRUCTOR
+     * 
+     * オブジェクトコンストラクタです
+     * 
+     * @param int $request_code リクエストコードを指定します
+     * @param int $request_data_code データコードを指定します
+     */
+    public function __construct($request_code, $request_data_code) {
+	$this->request_code = $request_code;
+	$this->request_data_code = $request_data_code;
+	$this->set_session();
     }
-    if (session_exists('gsc_mib_option')) {
-	switch($request_id) {
-	    case 20: //GROUP SELECT
-		$data = data_get_from_group(0); break;
-	    case 21:
-		data_reset_from_element(1); $data = data_get_from_group(0); break;
-	    case 22: case 23: case 24: case 25: case 26:
-		$data = data_get_from_group(0, $request_data_id); break;
-	    case 30:
-		data_get_from_group(0, $request_data_id, true); $data = data_get_from_group(1, $request_data_id, true); break;
-	    case 31:
-		data_reset_from_element(2); $data = data_get_from_group(1); break;
-	    case 32: case 33: case 34: case 35: case 36:
-		$data = data_get_from_element_byid(1, $request_data_id); break;
-	    case 40:
-		data_get_from_group(1, $request_data_id, true); $data = data_get_from_group(2, $request_data_id, true); break;
-	    case 41:
-		$data = data_get_from_group(2, $request_data_id, true); break;
-	    case 42: case 43:
-		$data = data_get_from_element(); break;
-	    case 44:
-		$data = data_get_from_group(3, $request_data_id); break;
+
+    /**
+     * [SET] セッションデータ作成
+     * 
+     * セッションデータを作成します<br>
+     * セッションデータは、MIBDataにて取得したデータです
+     * 
+     */
+    public function create_session() {
+	$data = new MIBData();
+	$this->session_data = $data->getMIB(3);
+	session_create('gsc_mib_option', $data);
+    }
+
+    /**
+     * [SET] AuthIDリセット
+     * 
+     * 認証情報であるAuthIDを解除し、認証情報がないことを確認します
+     */
+    public function reset_authid() {
+	session_unset_byid('gsc_authid');
+    }
+    
+    /**
+     * [SET] セッションデータリセット
+     * 
+     * セッションデータ 'gsc_mib_option' をリセットし、データを削除します
+     */
+    public function reset_session() {
+	session_unset_byid('gsc_mib_option');
+    }
+
+    /**
+     * [SET] セッションデータ取得
+     * 
+     * セッション情報 'gsc_mib_option' を取得します。<br>
+     * この際、取得されたデータは$session_dataに格納されます。
+     */
+    public function set_session(): void {
+	$this->session_data = session_get('gsc_mib_option');
+    }
+    
+    /**
+     * [GET] セッションデータ取得
+     * 
+     * セッション情報 'gsc_mib_option' を取得します。<br>
+     * 
+     * @return array 取得に成功した場合はその情報が、できない場合はnullが返されます
+     */
+    public static function get_session(): array {
+	return session_get('gsc_mib_option');
+    }
+
+    /**
+     * [SET] セッションデータ書き換え
+     * 
+     * gsc_mib_option のセッションデータを一旦削除し、また書き換えます
+     */
+    public function rewrite_session() {
+	session_unset_byid('gsc_mib_option');
+	session_create('gsc_mib_option', $this->session_data);
+    }
+    
+    /**
+     * [SET] 一時データリセット
+     * 
+     * gsc_mib_option 内の一時データを削除します
+     * 
+     * @param $type (0..GROUP, 1..SUB, 2..NODE)
+     * @param $stype (0..INPUT, 1..STORE)
+     */
+    public function reset_types($type, $stype) {
+	$type_text = $this->get_datatype($type);
+	$s_type_text = $this->get_settype($stype);
+	if ($this->is_set($type, $stype)) {
+	    unset($this->session_data[$type_text][$s_type_text]);
+	}
+	$this->rewrite_session();
+    }
+
+    /**
+     * [GET] データタイプ取得
+     * 
+     * GROUP, SUB, NODE をもつデータを取得します
+     * 
+     * @param int $type (0..グループ, 1..サブツリー, 2..ノード, それ以外..なし)
+     * @return string タイプコードに従い、値を返します
+     */
+    public function get_datatype($type) {
+	$type_text = '';
+	switch ($type) {
+	    case 0: $type_text = 'GROUP';
+		break;
+	    case 1: $type_text = 'SUB';
+		break;
+	    case 2: $type_text = 'NODE';
+		break;
+	}
+	return $type_text;
+    }
+    
+    /**
+     * [GET] 一時設定データタイプ取得
+     * 
+     * INPUT, STORE, PARENTの持つデータを取得します
+     * ・INPUT .. ユーザの入力データが格納されます
+     * ・STORE .. 現在選択されているデータが格納されます
+     * ・PARENT .. 親グループまたは親サブツリーにより選択されたデータが格納されます
+     * 
+     * @param int $type (0..INPUT, 1..STORE, 2..PARENT)
+     * @return string タイプコードに従い、テキストを返します
+     */
+    public function get_settype($type) {
+	$type_text = '';
+	switch($type) {
+	    case 0: $type_text = 'INPUT';
+		break;
+	    case 1: $type_text = 'STORE';
+		break;
+	    case 2: $type_text = 'PARENT';
+		break;
+	}
+	return $type_text;
+    }
+
+    /**
+     * [SET] セッションデータ一時保存データ格納
+     * 
+     * データく作成・編集・削除時に一時的にその手続きデータを格納します
+     * 
+     * @param int $type (0..GROUP, 1..SUB, 2..NODE） 
+     * @param int $stype (0..INPUT, 1..STORE, 2..PARENT）
+     * @param array $data キー配列つきの連想配列を渡します。keyとvalueをもとに格納されます。
+     */
+    public function set_data($type, $stype, $data) {
+	$type_text = $this->get_datatype($type);
+	$s_type_text = $this->get_settype($stype);
+	if ($type_text && $s_type_text) {
+	    $this->session_data[$type_text][$s_type_text] = $data;
+	    $this->rewrite_session();
 	}
     }
-    if ($data) {
-	$page = new MIBPage();
-	switch ($request_id) {
-	    //GROUP
-	    case 20: case 21: $html = $page->getGroupSelect($data); break;
-	    case 22: $html = $page->getGroupCreate(); break;
-	    case 23: $html = $page->getGroupEditSelect($data); break;
-	    case 24: $html = $page->getGroupEditOID($data); break;
-	    case 25: $html = $page->getGroupEditName($data); break;
-	    case 26: $html = $page->getGroupDelete($data); break;
 
-	    //SUB
-	    case 30: case 31: $html = $page->getSubSelect($data); break;
-	    case 32: $html = $page->getSubCreate($data); break;
-	    case 33: $html = $page->getSubEditSelect($data); break;
-	    case 34: $html = $page->getSubEditOID($data); break;
-	    case 35: $html = $page->getSubEditName($data); break;
-	    case 36: $html = $page->getSubDelete($data); break;
-
-	    //NODE
-	    case 40: case 41: $html = $page->getNodeEditTop($data); break;
-	    case 42: $html = $page->getNodeEditForm($data); break;
-	    case 43: $html = $page->getNodeEditIconSelect($data); break;
-	    
-	    default: $html = $page->getError(); break;
+    /**
+     * [GET] 一時データの内部データ取得
+     * 
+     * 一時データから取得したいkeyを指定しデータを取得します
+     * 
+     * @param int $type (0..GROUP, 1..SUB, 2..NODE） 
+     * @param int $stype (0..INPUT, 1..STORE, 2..PARENT）
+     * @param string $id データ内にあるIDを指定します
+     * @return (array|string|int)|null 取得できる場合はそのデータを、できない場合はnullを指定します
+     */
+    public function get_typesdata($type, $stype, $id) {
+	$type_text = $this->get_datatype($type);
+	$s_type_text = $this->get_settype($stype);
+	$data = '';
+	if ($type_text && $s_type_text && isset($this->session_data[$type_text][$s_type_text][$id])) {
+	    $data = $this->session_data[$type_text][$s_type_text][$id];
 	}
-    } else {
-	$code = 1;
+	return $data;
     }
-} else {
-    $code = 1;
-}
-if(!$html && $code == 1) {
-    $page = new MIBPage();
-    $html = $page->getError();
-}
-
-$res = ['CODE' => $code, 'PAGE' => $html];
-
-//ob_get_clean();
-echo json_encode($res);
-
-/**
- * [Function] MIB_OPTION データ初期化
- * 
- * セッションID 'gsc_mib_option' 内のデータをクリアし、MIB情報及びアイコン情報をもとにセッション情報を構築します
- */
-function initialize() {
-    session_unset_byid('gsc_mib_option');
-    $mibdata = new MIBData();
-    $icondata = IconData::getAllIconData();
-    $alldata = array_merge($mibdata->getMIB(1), $icondata);
-    session_create('gsc_mib_option', $alldata);
-}
-
-/**
- * [Function] MIB_OPTION データ取得
- * 
- * GROUP, SUB, NODE, ICON の4つのグループから欲しいデータを取得します<br>
- * 【データ取得方法】<br>
- * [GROUP] => [GROUPID]<br>
- * [SUB] => [PARENT_GROUPID]<br>
- * [NODE] => [PARENT_SUBID]<br>
- * [ICON] => [PAGEID]
- * 
- * @param int $type (0..GROUP, 1..SUB, 2..NODE, 3..ICON)
- * @param int|string $id そのタイプ内の分類されたIDを指定します（Default: ''）
- * @param bool $is_pap_el 選択項目情報としてセッションに登録した上でその情報を取得するかどうかを指定します（Default: false）
- * @return array|null $_SESSION['gsc_mib_option'][$type][$id]
- */
-function data_get_from_group($type, $id = '', $is_pap_el = false) {
-    $type_text = '';
-    switch($type) {
-	case 0: $type_text = 'GROUP'; break;
-	case 1: $type_text = 'SUB'; break;
-	case 2: $type_text = 'NODE'; break;
-	case 3: $type_text = 'ICON'; break;
+    
+    /**
+     * [GET] 設定確認
+     * 
+     * 各タイプにて、セッション状態を把握します
+     * 
+     * @param int $type (0..GROUP, 1..SUB, 2..NODE） 
+     * @param int $stype (0..INPUT, 1..STORE）
+     * @return bool issetの場合はtrue、そうでない場合はfalseを返します
+     */
+    public function is_set($type, $stype) {
+	$type_text = $this->get_datatype($type);
+	$s_type_text = $this->get_settype($stype);
+	return $type_text && $s_type_text && is_array($this->session_data) && isset($this->session_data[$type_text][$s_type_text]);
     }
-    $data = ($type_text) ? data_get($type_text) : '';
-    $res = ($id && $data) ? $data[$id] : $data;
-    if($is_pap_el) {
-	$res = data_set_from_element($type, $res);
-    }
-    return $res;
-}
-
-/**
- * [Function] MIB_OPTION 選択項目情報書き込み・取得
- * 
- * 今まで選択した情報をセッションに書き込み、またその情報を取得します<br>
- * $data[$id] → $_SESSION['gsc_mib_option']['SELECT'][$type]<br>
- * 【書き込みのタイミング】<br>
- * ・グループ情報を選択して「サブツリー選択」へ遷移した場合<br>
- * ・サブツリー情報を選択して「ノード編集」へ遷移した場合
- * 
- * @param int $type (0..GROUP, 1..SUB, 2..NODE)
- * @param string $data GROUP, SUB, NODE のいずれかのデータが指定されます
- * @return array|null $_SESSION['gsc_mib_option']['SELECT'][$type][$id]
- */
-function data_set_from_element($type, $data) {
-    $type_text = '';
-    switch($type) {
-	case 0: $type_text = 'GROUP'; break;
-	case 1: $type_text = 'SUB'; break;
-	case 2: $type_text = 'NODE'; break;
-    }
-    if($type_text && $data) {
-	$data_set = session_get('gsc_mib_option');
-	$data_set['SELECT'][$type_text] = $data;
-	session_unset_byid('gsc_mib_option');
-	session_create('gsc_mib_option', $data_set);
-    }
-    return data_get_from_element();
-}
-
-/**
- * [Function] 
- * [Function] MIB_OPTION 選択項目情報取得
- * 
- * GROUP, SUB, NODE, ICON の4つのグループデータを取得します<br>
- * 
- * @param int $type (0..GROUP, 1..SUB, 2..NODE)
- * @param string $id そのグループ中にあるIDを指定します
- * @param bool $is_pap_el 選択項目情報としてセッションに登録した上でその情報を取得するかどうかを指定します（Default: false）
- * 
- * @return array|null $_SESSION['gsc_mib_option']['SELECT'][$type (text)][$id]
- */
-function data_get_from_element_byid($type, $id, $is_pap_el = false) {
-    $data = data_get_from_element();
-    $type_text = '';
-    switch($type) {
-	case 0: $type_text = 'GROUP'; break;
-	case 1: $type_text = 'SUB'; break;
-	case 2: $type_text = 'NODE'; break;
-    }
-    $res = ($data && $id && $type_text) ? $data[$type_text][$id] : '';
-    if($is_pap_el) {
-	$res = data_set_from_element($type, $res);
-    }
-    return $res;
-}
-
-/**
- * [Function] MIB_OPTION 選択項目情報取得
- * 
- * GROUP, SUB, NODE, ICON の4つのグループデータを取得します<br>
- * 
- * @return array|null $_SESSION['gsc_mib_option']['SELECT']
- */
-function data_get_from_element() {
-    return data_get('SELECT');
-}
-
-/**
- * [Function] MIB_OPTION 選択項目情報リセット
- * 
- * 指定したタイプの項目情報をセッションから削除します<br>
- * reset -> $_SESSION['gsc_mib_option']['SELECT'][$type]
- * 
- * @param int $type (0..GROUP, 1..SUB, 2..NODE)
- */
-function data_reset_from_element($type) {
-    $type_text = '';
-    switch($type) {
-	case 0: $type_text = 'GROUP'; break;
-	case 1: $type_text = 'SUB'; break;
-	case 2: $type_text = 'NODE'; break;
-    }
-    if($type_text) {
-	$data_set = session_get('gsc_mib_option');
-	unset($data_set['SELECT'][$type_text]);
-	session_unset_byid('gsc_mib_option');
-	session_create('gsc_mib_option', $data_set);
-    }
-}
-
-/**
- * [Function] MIB_OPTION セッションデータ取得
- * 
- * セッションデータのMIBオプションから取得したいIDを指定してMIB・ICONデータを取得します。
- * 
- * @param string $id gsc_mib_optionに対するID
- * @return array|null $_SESSION['gsc_mib_option'][$id]
- */
-function data_get($id) {
-    $data = session_get('gsc_mib_option');
-    return ($data && isset($data[$id])) ? $data[$id] : '';
 }

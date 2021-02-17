@@ -1,6 +1,6 @@
 <?php
 
-include_once ('../general/sqldata.php');
+include_once __DIR__ . '/../general/sqldata.php';
 
 class ACCOUNTData {
 
@@ -40,7 +40,7 @@ class ACCOUNTData {
 	    }
 	    return $result;
 	} else {
-	    return false;
+	    return '';
 	}
     }
 

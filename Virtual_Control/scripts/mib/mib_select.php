@@ -25,7 +25,7 @@ class MIBSubSelect extends loader {
 	if ($checkedSel) {
 	    $res .= $this->Check('mb_ck_0', 'sl_ab', 'all', '全て選択', false, false, true);
 	} else {
-	    $res .= $this->Check('mb_ck_0', 'sl_ab', 'all', '全て選択', false, true, true);
+	    $res .= $this->Check('mb_ck_0', 'sl_ab', 'all', '全て選択', true, false, true);
 	}
 	foreach ($this->data['SUB'] as $v => $group) {
 	    $res .= '【' . $this->data['GROUP'][$v]['GROUP_OID'] . '】' . $this->data['GROUP'][$v]['GROUP_NAME'] . '<br>';
@@ -47,7 +47,7 @@ class MIBSubSelect extends loader {
 	return $this->getSubSelect();
     }
 
-    public function getSubSelectOnAgent($subids) {
+    public function getSubSelectOnAgents($subids) {
 	$res = [];
 	foreach ($subids as $k => $v) {
 	    $res[$k] = $this->getSubSelect($v);
@@ -55,4 +55,8 @@ class MIBSubSelect extends loader {
 	return $res;
     }
 
+    public function getSubSelectOnAgent($subids) {
+	$res = $this->getSubSelect($subids);
+	return $res;
+    }
 }
