@@ -1,5 +1,5 @@
 ---
-## A Controlling Networks Tool.
+> ## A Controlling Networks Tool.
 # Virtual Control (v 0.6.0)
 ---
 
@@ -16,7 +16,7 @@
 <ul><li>OS: Ubuntu Linux 20.04.2 LTS</li><li>用途: Webサーバ, SNMPマネージャ</li></ul>
 
 ## 4. 導入方法
-本システムでは、自動的にセットアップできるインストーラスクリプト（同梱のsetup.sh）のご利用を推奨しております。以下は、インストーラスクリプトを利用した方法です。
+0. インストーラスクリプトを [Gist (https://gist.github.com/ClearNB/c54d8a64ed8104273fd543a00becbb27)](https://gist.github.com/ClearNB/c54d8a64ed8104273fd543a00becbb27) から取得します。
 1. インストーラスクリプトをUbuntu上に置き、置いた場所で端末を起動し、以下のコマンドを実行して起動権限が付与されていることを確認します。
 <pre>$ ls -la</pre>
 2. (白色の場合)以下のコマンドを実行し、再び【1】のコマンドを実行して起動権限が付与されていることを確認します。
